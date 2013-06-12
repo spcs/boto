@@ -1,11 +1,11 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # Author: Chris Moyer <cmoyer@newstex.com>
 # Description: CloudWatch Utility
 # For listing stats, creating alarms, and managing 
 # other CloudWatch aspects
 
 import boto
-cw = boto.connect_cloudwatch()
+cw = boto.connect_cloudwatch(path="monitor")
 
 from datetime import datetime, timedelta
 
@@ -30,6 +30,18 @@ def ls(namespace=None):
     for m in cw.list_metrics():
         if namespace is None or namespace.upper() in m.namespace:
             print "%-10s %-50s %s" % (m.namespace, m.name, m.dimensions)
+
+
+def describe_alarms():
+    """
+    Describe list of alarms.
+    """
+    ls = cw.describe_alarms()
+    print "%-10s %-50s %s" % ("Namespace", "Alarm Name", "Dimensions")
+    print "-"*80
+    for l in ls:
+        print "%-10s %-50s %s" % (l.namespace, l.name, l.dimensions)
+
 
 def stats(namespace, metric_name, dimensions=None, statistics="Average", start_time=None, end_time=None, period=60, unit=None):
     """
@@ -90,6 +102,23 @@ def put(namespace, metric_name, dimensions=None, value=None, unit=None, statisti
         statistics = simplify(map(_parse_dict, statistics.split(';'))) if statistics else None,
         timestamp = simplify(timestamp.split(';')) if timestamp else None,
         unit = simplify(unit.split(';')) if unit else None)
+
+
+def enable_alarm_actions(alarm_names):
+    """
+    Enable alarm actions.
+        alarmName: Alarm name to activate action.
+    """
+    print cw.enable_alarm_actions(alarm_names=alarm_names)
+
+
+def disable_alarm_actions(alarm_names):
+    """
+    Enable alarm actions.
+        alarmName: Alarm name to activate action.
+    """
+    print cw.disable_alarm_actions(alarm_names=alarm_names)
+
 
 def help(fnc=None):
     """
