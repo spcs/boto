@@ -5,12 +5,15 @@
 # other CloudWatch aspects
 
 import boto
+from boto.ec2.cloudwatch import MetricAlarm 
 cw = boto.connect_cloudwatch(path="monitor")
 
 from datetime import datetime, timedelta
 
 def _parse_time(time_string):
     """Internal function to parse a time string"""
+    NO_MS_TIME_FORMAT = "%Y-%m-%dT%H:%M:%S"
+    return datetime.strptime(time_string, NO_MS_TIME_FORMAT)
 
 def _parse_dict(d_string):
     result = {}
@@ -31,16 +34,106 @@ def ls(namespace=None):
         if namespace is None or namespace.upper() in m.namespace:
             print "%-10s %-50s %s" % (m.namespace, m.name, m.dimensions)
 
+def delete_alarm(alarm_name):
+    """
+    Delete Alarm
+    """
+    return cw.delete_alarms([alarm_name])
+    
 
-def describe_alarms():
+def ls_alarm(alarm_name_prefix=None, state_value=None):
     """
     Describe list of alarms.
     """
-    ls = cw.describe_alarms()
-    print "%-10s %-50s %s" % ("Namespace", "Alarm Name", "Dimensions")
+    ls = cw.describe_alarms(alarm_name_prefix=alarm_name_prefix, 
+                            state_value=None)
+    print "%-20s %-25s %-10s %-40s" % ("AlarmName", "State", "Action",
+                                "(namespace:metric:dimensions:"
+                                "statistic:period:evalution)>threshold(unit) " 
+                                "A:alarm_action O:ok_action I:insuff.action")
     print "-"*80
     for l in ls:
-        print "%-10s %-50s %s" % (l.namespace, l.name, l.dimensions)
+        print ("%-20s %-25s %-10s (%s:%s:%s:%s:%s:%s)%s%s(%s) A:%s O:%s I:%s " % 
+               (l.name, l.state_value, l.actions_enabled, l.namespace, 
+                l.metric, l.dimensions, l.statistic, l.period, 
+                l.evaluation_periods, l.comparison, l.threshold, l.unit, 
+                l.alarm_actions, l.ok_actions, l.insufficient_data_actions))
+    
+
+def history(alarm_name=None, start_time=None, end_time=None, 
+            history_item_type=None):
+    """
+    List alarm history
+    
+    Action
+    """
+    next_token = None
+
+    # Parse the times
+    if end_time:
+        end_time = _parse_time(end_time)
+    else:
+        end_time = datetime.utcnow()
+    if start_time:
+        start_time = _parse_time(start_time)
+    else:
+        start_time = datetime.utcnow() - timedelta(days=1)
+
+    ls = cw.describe_alarm_history(alarm_name=alarm_name, 
+                                   start_date=start_time, 
+                                   end_date=end_time, 
+                                   history_item_type=history_item_type, 
+                                   max_records=100,
+                                   next_token=next_token)
+    
+    print "%-26s %-20s %-20s %s" % ("Timestamp", "AlarmName", "ItemType", 
+                                    "Summary")
+    print "-"*80
+    for l in sorted(ls, cmp=lambda x,y: cmp(x.timestamp, y.timestamp)): 
+        print "%-26s %-20s %-20s %s" % (l.timestamp, l.name, l.tem_type, 
+                                        l.summary)
+
+
+def put_alarm(namespace, metric_name, dimensions, alarm_name, 
+              statistic="Average", comparison=">", threshold=90, unit=None, 
+              period=60, evaluation_periods=1, description=None, 
+              alarm_actions=None, insufficient_data_actions=None, 
+              ok_actions=None):
+    """
+    Put MetricAlarm
+        namespace:
+        metric_name:
+        dimensions: 
+        alarm_name: 
+        statistic: default "Average"
+        comparison: default ">" 
+        threshold: default 90
+        unit: default None
+        period: default 60
+        evaluation_periods: default 1 minute
+        description: default None
+        alarm_actions: default None
+        insufficient_data_actions: default None 
+        ok_actions: default None
+    """
+    # Parse the dimensions
+    dimensions = _parse_dict(dimensions)
+    
+    # Parse alarm_actions
+    alarm_actions = alarm_actions.split(':') if alarm_actions else None
+    insufficient_data_actions = insufficient_data_actions.split(':') \
+                                if insufficient_data_actions else None
+    ok_actions = ok_actions.split(':') if ok_actions else None
+        
+    alarm = MetricAlarm(connection=cw, name=alarm_name, metric=metric_name, 
+                        namespace=namespace, statistic=statistic, 
+                        comparison=comparison, threshold=threshold, 
+                        period=period, evaluation_periods=evaluation_periods, 
+                        unit=unit, description=description, 
+                        dimensions=dimensions, alarm_actions=alarm_actions, 
+                        insufficient_data_actions=insufficient_data_actions, 
+                        ok_actions=ok_actions)
+    cw.put_metric_alarm(alarm)
 
 
 def stats(namespace, metric_name, dimensions=None, statistics="Average", start_time=None, end_time=None, period=60, unit=None):
