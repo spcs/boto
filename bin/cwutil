@@ -30,9 +30,8 @@ def ls(namespace=None):
     """
     print "%-10s %-50s %s" % ("Namespace", "Metric Name", "Dimensions")
     print "-"*80
-    for m in cw.list_metrics():
-        if namespace is None or namespace.upper() in m.namespace:
-            print "%-10s %-50s %s" % (m.namespace, m.name, m.dimensions)
+    for m in cw.list_metrics(namespace=namespace):
+        print "%-10s %-50s %s" % (m.namespace, m.name, m.dimensions)
 
 def delete_alarm(alarm_name):
     """
@@ -193,7 +192,7 @@ def put(namespace, metric_name, dimensions=None, value=None, unit=None, statisti
         dimensions = simplify(map(_parse_dict, dimensions.split(';'))) if dimensions else None,
         value = simplify(value.split(';')) if value else None,
         statistics = simplify(map(_parse_dict, statistics.split(';'))) if statistics else None,
-        timestamp = simplify(timestamp.split(';')) if timestamp else None,
+        timestamp = simplify(map(_parse_time, timestamp.split(';'))) if timestamp else None,
         unit = simplify(unit.split(';')) if unit else None)
 
 
