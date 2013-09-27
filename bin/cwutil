@@ -119,10 +119,10 @@ def put_alarm(namespace, metric_name, dimensions, alarm_name,
     dimensions = _parse_dict(dimensions)
     
     # Parse alarm_actions
-    alarm_actions = alarm_actions.split(':') if alarm_actions else None
-    insufficient_data_actions = insufficient_data_actions.split(':') \
+    alarm_actions = alarm_actions.split(',') if alarm_actions else None
+    insufficient_data_actions = insufficient_data_actions.split(',') \
                                 if insufficient_data_actions else None
-    ok_actions = ok_actions.split(':') if ok_actions else None
+    ok_actions = ok_actions.split(',') if ok_actions else None
         
     alarm = MetricAlarm(connection=cw, name=alarm_name, metric=metric_name, 
                         namespace=namespace, statistic=statistic, 
