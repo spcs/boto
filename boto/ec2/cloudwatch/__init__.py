@@ -190,7 +190,7 @@ class CloudWatchConnection(AWSQueryConnection):
 
     def get_metric_statistics(self, period, start_time, end_time, metric_name,
                               namespace, statistics, dimensions=None,
-                              unit=None):
+                              unit=None, project_id=None):
         """
         Get time-series data for one or more statistics of a given metric.
 
@@ -245,6 +245,8 @@ class CloudWatchConnection(AWSQueryConnection):
                   'Namespace': namespace,
                   'StartTime': start_time.isoformat(),
                   'EndTime': end_time.isoformat()}
+        if project_id:
+            params['ProjectId'] = project_id        
         self.build_list_params(params, statistics, 'Statistics.member.%d')
         if dimensions:
             self.build_dimension_param(dimensions, params)
@@ -254,7 +256,7 @@ class CloudWatchConnection(AWSQueryConnection):
                              [('member', Datapoint)])
 
     def list_metrics(self, next_token=None, dimensions=None,
-                     metric_name=None, namespace=None):
+                     metric_name=None, namespace=None, project_id=None):
         """
         Returns a list of the valid metrics for which there is recorded
         data available.
@@ -284,6 +286,8 @@ class CloudWatchConnection(AWSQueryConnection):
             If None, Metrics from all namespaces will be returned.
         """
         params = {}
+        if project_id:
+            params['ProjectId'] = project_id        
         if next_token:
             params['NextToken'] = next_token
         if dimensions:
@@ -296,7 +300,8 @@ class CloudWatchConnection(AWSQueryConnection):
         return self.get_list('ListMetrics', params, [('member', Metric)])
 
     def put_metric_data(self, namespace, name, value=None, timestamp=None,
-                        unit=None, dimensions=None, statistics=None):
+                        unit=None, dimensions=None, statistics=None, 
+                        project_id=None):
         """
         Publishes metric data points to Amazon CloudWatch. Amazon Cloudwatch
         associates the data points with the specified metric. If the specified
@@ -338,6 +343,8 @@ class CloudWatchConnection(AWSQueryConnection):
             {'maximum': 30, 'minimum': 1, 'samplecount': 100, 'sum': 10000}
         """
         params = {'Namespace': namespace}
+        if project_id:
+            params['ProjectId'] = project_id
         self.build_put_params(params, name, value=value, timestamp=timestamp,
             unit=unit, dimensions=dimensions, statistics=statistics)
 
@@ -345,7 +352,7 @@ class CloudWatchConnection(AWSQueryConnection):
 
     def describe_alarms(self, action_prefix=None, alarm_name_prefix=None,
                         alarm_names=None, max_records=None, state_value=None,
-                        next_token=None):
+                        next_token=None, project_id=None):
         """
         Retrieves alarms with the specified names. If no name is specified, all
         alarms for the user are returned. Alarms can be retrieved by using only
@@ -376,6 +383,8 @@ class CloudWatchConnection(AWSQueryConnection):
         :rtype list
         """
         params = {}
+        if project_id:
+            params['ProjectId'] = project_id
         if action_prefix:
             params['ActionPrefix'] = action_prefix
         if alarm_name_prefix:
@@ -398,7 +407,7 @@ class CloudWatchConnection(AWSQueryConnection):
     def describe_alarm_history(self, alarm_name=None,
                                start_date=None, end_date=None,
                                max_records=None, history_item_type=None,
-                               next_token=None):
+                               next_token=None, project_id=None):
         """
         Retrieves history for the specified alarm. Filter alarms by date range
         or item type. If an alarm name is not specified, Amazon CloudWatch
@@ -432,6 +441,8 @@ class CloudWatchConnection(AWSQueryConnection):
         :rtype list
         """
         params = {}
+        if project_id:
+            params['ProjectId'] = project_id        
         if alarm_name:
             params['AlarmName'] = alarm_name
         if start_date:
@@ -448,7 +459,8 @@ class CloudWatchConnection(AWSQueryConnection):
                              [('member', AlarmHistoryItem)])
 
     def describe_alarms_for_metric(self, metric_name, namespace, period=None,
-                                   statistic=None, dimensions=None, unit=None):
+                                   statistic=None, dimensions=None, unit=None,
+                                   project_id=None):
         """
         Retrieves all alarms for a single metric. Specify a statistic, period,
         or unit to filter the set of alarms further.
@@ -480,6 +492,8 @@ class CloudWatchConnection(AWSQueryConnection):
         """
         params = {'MetricName': metric_name,
                   'Namespace': namespace}
+        if project_id:
+            params['ProjectId'] = project_id        
         if period:
             params['Period'] = period
         if statistic:
@@ -491,7 +505,7 @@ class CloudWatchConnection(AWSQueryConnection):
         return self.get_list('DescribeAlarmsForMetric', params,
                              [('member', MetricAlarm)])
 
-    def put_metric_alarm(self, alarm):
+    def put_metric_alarm(self, alarm, project_id=None):
         """
         Creates or updates an alarm and associates it with the specified Amazon
         CloudWatch metric. Optionally, this operation can associate one or more
@@ -517,6 +531,8 @@ class CloudWatchConnection(AWSQueryConnection):
                     'EvaluationPeriods': alarm.evaluation_periods,
                     'Period': alarm.period,
                  }
+        if project_id:
+            params['ProjectId'] = project_id        
         if alarm.actions_enabled is not None:
             params['ActionsEnabled'] = alarm.actions_enabled
         if alarm.alarm_actions:
@@ -539,7 +555,7 @@ class CloudWatchConnection(AWSQueryConnection):
     create_alarm = put_metric_alarm
     update_alarm = put_metric_alarm
 
-    def delete_alarms(self, alarms):
+    def delete_alarms(self, alarms, project_id=None):
         """
         Deletes all specified alarms. In the event of an error, no
         alarms are deleted.
@@ -548,11 +564,13 @@ class CloudWatchConnection(AWSQueryConnection):
         :param alarms: List of alarm names.
         """
         params = {}
+        if project_id:
+            params['ProjectId'] = project_id        
         self.build_list_params(params, alarms, 'AlarmNames.member.%s')
         return self.get_status('DeleteAlarms', params)
 
     def set_alarm_state(self, alarm_name, state_reason, state_value,
-                        state_reason_data=None):
+                        state_reason_data=None, project_id=None):
         """
         Temporarily sets the state of an alarm. When the updated StateValue
         differs from the previous value, the action configured for the
@@ -575,12 +593,14 @@ class CloudWatchConnection(AWSQueryConnection):
         params = {'AlarmName': alarm_name,
                   'StateReason': state_reason,
                   'StateValue': state_value}
+        if project_id:
+            params['ProjectId'] = project_id
         if state_reason_data:
             params['StateReasonData'] = json.dumps(state_reason_data)
 
         return self.get_status('SetAlarmState', params)
 
-    def enable_alarm_actions(self, alarm_names):
+    def enable_alarm_actions(self, alarm_names, project_id=None):
         """
         Enables actions for the specified alarms.
 
@@ -588,10 +608,12 @@ class CloudWatchConnection(AWSQueryConnection):
         :param alarms: List of alarm names.
         """
         params = {}
+        if project_id:
+            params['ProjectId'] = project_id
         self.build_list_params(params, alarm_names, 'AlarmNames.member.%s')
         return self.get_status('EnableAlarmActions', params)
 
-    def disable_alarm_actions(self, alarm_names):
+    def disable_alarm_actions(self, alarm_names, project_id=None):
         """
         Disables actions for the specified alarms.
 
@@ -599,5 +621,7 @@ class CloudWatchConnection(AWSQueryConnection):
         :param alarms: List of alarm names.
         """
         params = {}
+        if project_id:
+            params['ProjectId'] = project_id
         self.build_list_params(params, alarm_names, 'AlarmNames.member.%s')
         return self.get_status('DisableAlarmActions', params)
